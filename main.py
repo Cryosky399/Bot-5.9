@@ -2121,20 +2121,20 @@ async def handle_all_messages(message: types.Message):
         users = await get_all_vip_user_ids()
         await broadcast_message(message, users, text, "VIP")
 
-    elif action == 'broadcast_regular':
-        text = message.text
-        user_data.pop(user_id, None)
-        users = await get_all_regular_user_ids()
-        await broadcast_message(message, users, text, "Oddiy")
-    
-    # ESKI 'broadcast' O'CHIRILDI
+            elif action == 'broadcast_regular':
+            text = message.text
+            user_data.pop(user_id, None)
+            users = await get_all_regular_user_ids()
+            await broadcast_message(message, users, text, "Oddiy")
+        
+        # ESKI 'broadcast' O'CHIRILDI
 
-        elif action == 'post_to_channel':
-        code = message.text.strip()
-        kino = await get_kino_by_code(code)
-        if not kino:
-            await message.answer("❌ Kod topilmadi.")
-            return
+        elif action == 'post_to_channel':  # <-- MANA SHUNDAY BO'LISHI KERAK
+            code = message.text.strip()
+            kino = await get_kino_by_code(code)
+            if not kino:
+                await message.answer("❌ Kod topilmadi.")
+                return
         
         if not MAIN_CHANNELS:
             await message.answer("❌ Asosiy kanal belgilanmagan! (📡 Kanal boshqaruvi -> 📌 Asosiy kanallar)", reply_markup=admin_panel_keyboard())
