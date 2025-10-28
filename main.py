@@ -2129,27 +2129,36 @@ async def handle_all_messages(message: types.Message):
     
     # ESKI 'broadcast' O'CHIRILDI
 
-    elif action == 'post_to_channel':
+        elif action == 'post_to_channel':
         code = message.text.strip()
         kino = await get_kino_by_code(code)
         if not kino:
             await message.answer("❌ Kod topilmadi.")
             return
         
-        user_data.pop(user_id, None)
-        
         if not MAIN_CHANNELS:
-            await message.answer("❌ Asosiy kanal belgilanmagan!")
+            await message.answer("❌ Asosiy kanal belgilanmagan! (📡 Kanal boshqaruvi -> 📌 Asosiy kanallar)", reply_markup=admin_panel_keyboard())
+            user_data.pop(user_id, None) # Holatni tozalash
             return
         
-        channel_id = MAIN_CHANNELS[0]
+        # Foydalanuvchi holatini saqlaymiz
+        user_data[user_id] = {
+            'action': 'post_channel_select', # Bu yangi holat
+            'code': code,
+            'selected_channels': set() # Boshlang'ich tanlovlar (bo'sh)
+        }
         
-        try:
-            await send_channel_post(channel_id, kino, code)
-            await message.answer("✅ Post kanalga yuborildi!", reply_markup=admin_panel_keyboard())
-        except Exception as e:
-            await message.answer(f"❌ Xatolik: {e}", reply_markup=admin_panel_keyboard())
-
+        # Tanlash menyusini yaratamiz
+        keyboard = await generate_channel_selection_keyboard(user_id)
+        
+        await message.answer(
+            f"🎬 Anime: *{kino.get('title', 'Noma\'lum')}*\n\n"
+            f"📡 Qaysi asosiy kanal(lar)ga post qilmoqchisiz? Tanlang:",
+            reply_markup=keyboard,
+            parse_mode="Markdown"
+        )
+    
+    #HOZ
     elif action == 'ban_user':
         try:
             ban_id = int(message.text.strip())
