@@ -2142,7 +2142,7 @@ async def handle_all_messages(message: types.Message):
             return
         
         # Foydalanuvchi holatini saqlaymiz
-        user_data[user_id] = {
+            user_data[user_id] = {
             'action': 'post_channel_select', # Bu yangi holat
             'code': code,
             'selected_channels': set() # Boshlang'ich tanlovlar (bo'sh)
@@ -2248,6 +2248,92 @@ async def anime_forward_toggle_callback(call: types.CallbackQuery):
         await call.message.edit_text("❌ Anime forward statusi OFF qilindi!")
     
     await call.answer()
+
+
+# --- YANGI HANDLER (Kanal tanlash menyusini boshqarish) ---
+@dp.callback_query_handler(lambda c: c.data.startswith("post_") and user_data.get(c.from_user.id, {}).get('action') == 'post_channel_select')
+async def post_selection_callback(call: types.CallbackQuery):
+    user_id = call.from_user.id
+    data = user_data.get(user_id)
+    
+    if not data:
+        try:
+            await call.message.edit_text("❌ Xatolik! Yoki vaqt tugadi. /start bosing.")
+        except:
+            pass
+        await call.answer()
+        return
+
+    action_part = call.data.split(":")[0]
+    code = data.get('code')
+    
+    if action_part == "post_toggle_ch":
+        try:
+            channel_id = int(call.data.split(":")[1])
+            if channel_id in data['selected_channels']:
+                data['selected_channels'].remove(channel_id)
+                await call.answer(f"ID: {channel_id} olib tashlandi")
+            else:
+                data['selected_channels'].add(channel_id)
+                await call.answer(f"ID: {channel_id} tanlandi")
+            
+            # Menyuni yangilaymiz
+            new_kb = await generate_channel_selection_keyboard(user_id)
+            await call.message.edit_reply_markup(reply_markup=new_kb)
+        
+        except Exception as e:
+            print(f"post_toggle_ch xatolik: {e}")
+            await call.answer("❌ Xatolik!")
+
+    elif action_part == "post_send_all" or action_part == "post_send_selected":
+        
+        target_channels = []
+        if action_part == "post_send_all":
+            target_channels = MAIN_CHANNELS
+            await call.answer("📤 Barcha kanallarga yuborilmoqda...")
+        else: # post_send_selected
+            target_channels = list(data['selected_channels'])
+            if not target_channels:
+                await call.answer("❌ Hech qaysi kanal tanlanmadi!", show_alert=True)
+                return
+            await call.answer(f"📤 {len(target_channels)} ta tanlangan kanalga yuborilmoqda...")
+
+        kino = await get_kino_by_code(code)
+        if not kino:
+            await call.message.edit_text("❌ Anime kodi topilmadi! (o'chirilgan bo'lishi mumkin)")
+            user_data.pop(user_id, None)
+            return
+        
+        try:
+            await call.message.edit_text(f"📤 Post yuborilmoqda... Jami: {len(target_channels)} ta kanal.")
+        except:
+            pass # Xabar o'zgarmagan bo'lsa
+        
+        success_count = 0
+        failed_count = 0
+        
+        for channel_id in target_channels:
+            try:
+                await send_channel_post(channel_id, kino, code)
+                success_count += 1
+                await asyncio.sleep(0.5)
+            except Exception as e:
+                failed_count += 1
+                print(f"Kanalga post yuborishda xatolik ({channel_id}): {e}")
+
+        await call.message.answer(
+            f"✅ Yuborish tugadi!\n\n"
+            f"👍 Muvaffaqiyatli: {success_count} ta kanal\n"
+            f"👎 Xatolik: {failed_count} ta kanal",
+            reply_markup=admin_panel_keyboard()
+        )
+        user_data.pop(user_id, None) # Holatni tozalash
+
+    elif action_part == "post_cancel":
+        user_data.pop(user_id, None)
+        await call.message.edit_text("Post qilish bekor qilindi.")
+        await call.answer()
+# --- YANGI HANDLER TUGADI ---
 
 
 async def on_startup(dp):
