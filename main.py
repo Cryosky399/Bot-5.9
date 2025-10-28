@@ -185,39 +185,42 @@ def admin_broadcast_menu_keyboard():
     return kb
 
 # --- END KEYBOARDS ---
-
+# POST BOSHLANDI
 # YANGI FUNKSIYA (Post qilish uchun kanal tanlash menyusi)
-async def generate_channel_selection_keyboard(user_id):
+
+async def generate_channel_selection_keyboard(user_id, code): # <-- 1. 'code' ҚОСЫЛДЫ
     """
     Foydalanuvchi uchun kanal tanlash menyusini yaratadi.
     user_data da 'selected_channels' (set) bo'lishi kerak.
     """
     data = user_data.get(user_id, {})
     selected_channels = data.get('selected_channels', set())
-    
+
     kb = InlineKeyboardMarkup(row_width=1)
-    
+
     # Barcha asosiy kanallarni tugma sifatida qo'shamiz
     for idx, channel_id in enumerate(MAIN_CHANNELS):
-        # Kanal nomini (username) olamiz, agar yo'q bo'lsa ID sini ko'rsatamiz
+        # ... (name, display_name logic)
         name = MAIN_USERNAMES[idx]
         display_name = f"@{name}" if name else f"ID: {channel_id}"
-        
+
         if channel_id in selected_channels:
             button_text = f"✅ {display_name}"
         else:
             button_text = f"☑️ {display_name}"
-        
-        kb.add(InlineKeyboardButton(button_text, callback_data=f"post_toggle_ch:{channel_id}"))
-    
+        # ... (if/else tugaydi)
+
+        # 2. 'code' БАРЛЫҚ ЖЕРГЕ ҚОСЫЛДЫ:
+        kb.add(InlineKeyboardButton(button_text, callback_data=f"post_toggle_ch:{channel_id}:{code}"))
+
     # Boshqaruv tugmalari
-    kb.add(InlineKeyboardButton("✅ Barchasiga jo'natish", callback_data="post_send_all"))
-    
+    kb.add(InlineKeyboardButton("✅ Barchasiga jo'natish", callback_data=f"post_send_all:{code}"))
+
     selected_count = len(selected_channels)
-    kb.add(InlineKeyboardButton(f"🚀 Jo'natish ({selected_count} ta tanlangan)", callback_data="post_send_selected"))
-    
-    kb.add(InlineKeyboardButton("❌ Bekor qilish", callback_data="post_cancel"))
-    
+    kb.add(InlineKeyboardButton(f"🚀 Jo'natish ({selected_count} ta tanlangan)", callback_data=f"post_send_selected:{code}"))
+
+    kb.add(InlineKeyboardButton("❌ Bekor qilish", callback_data=f"post_cancel:{code}"))
+
     return kb
 
 # --- END (Yangi funksiya) ---
